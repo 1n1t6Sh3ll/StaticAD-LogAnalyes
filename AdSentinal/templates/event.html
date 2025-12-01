@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% block title %}Event #{{ event_log_id }} | AD Sentinel{% endblock %}
+{% block content %}
+
+<div class="animate-fadeInUp space-y-8">
+
+    <!-- Breadcrumb -->
+    <div class="text-sm text-slate-400 flex items-center gap-2">
+        <a href="/" class="hover:text-white">Home</a>
+        <span>/</span>
+        <a href="/alerts" class="hover:text-white">Alerts</a>
+        <span>/</span>
+        <span class="text-brand-500 font-semibold">Event #{{ event_log_id }}</span>
+    </div>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <i class="ph ph-magnifying-glass text-brand-500 text-2xl"></i>
+                Incident Investigation
+            </h1>
+            <p class="text-slate-400 text-sm">
+                Event Log ID: <span class="text-brand-500 font-semibold">#{{ event_log_id }}</span>
+            </p>
+        </div>
+
+        {% if severity in ['CRITICAL', 'HIGH'] %}
+        <span class="px-5 py-3 rounded-lg text-xs font-semibold tracking-wider shadow-md flex items-center gap-2
+            {% if severity=='CRITICAL' %} bg-risk-crit
+            {% else %} bg-risk-high {% endif %}">
+            <i class="ph ph-warning-circle text-lg"></i>
+            {{ severity == 'CRITICAL' and 'CRITICAL ALERT' or 'HIGH PRIORITY' }}
+        </span>
+        {% endif %}
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-5">
+
+        <div class="bg-dark-800 rounded-xl border border-dark-700 p-5">
+            <p class="text-slate-400 text-sm mb-1">Severity Level</p>
+            <p class="text-2xl font-bold">{{ severity }}</p>
+            <p class="text-slate-500 text-xs">Threat classification</p>
+        </div>
+
+        <div class="bg-dark-800 rounded-xl border border-dark-700 p-5">
+            <p class="text-slate-400 text-sm mb-1">Risk Score</p>
+            <p class="text-2xl font-bold bg-gradient-to-r from-red-400 to-red-600 bg-clip-text text-transparent">
+                {{ risk_score }}
+            </p>
+            <p class="text-slate-500 text-xs">{{ risk_level }} risk level</p>
+        </div>
+
+        <div class="bg-dark-800 rounded-xl border border-dark-700 p-5">
+            <p class="text-slate-400 text-sm mb-1">Event ID</p>
+            <p class="text-2xl font-bold">{{ event_id }}</p>
+            <p class="text-slate-500 text-xs">Windows Event ID</p>
+        </div>
+
+        <div class="bg-dark-800 rounded-xl border border-dark-700 p-5">
+            <p class="text-slate-400 text-sm mb-1">Category</p>
+            <p class="text-2xl font-bold">{{ category }}</p>
+            <p class="text-slate-500 text-xs">Attack category</p>
+        </div>
+
+    </div>
+
+    <!-- Details -->
+    <div class="bg-dark-800 rounded-xl border border-dark-700 p-6 space-y-6">
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+            <i class="ph ph-info text-brand-500 text-xl"></i> Event Details
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            <div>
+                <h3 class="font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <i class="ph ph-clock"></i> Timeline
+                </h3>
+                <p><span class="text-slate-400">Alert Time:</span> <span class="font-semibold">{{ alert_time }}</span></p>
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <i class="ph ph-bullseye"></i> Attack Tactic
+                </h3>
+                {% if tactic %}
+                    <span class="bg-yellow-300 text-black px-2 py-1 rounded text-xs font-semibold">{{ tactic }}</span>
+                {% else %}
+                    <span class="text-slate-500">Unknown</span>
+                {% endif %}
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <i class="ph ph-device-desktop"></i> Target Host
+                </h3>
+                {% if computer %}
+                    <a href="/host/{{ computer }}" class="text-brand-500 hover:underline font-semibold">{{ computer }}</a>
+                {% else %}
+                    <span class="text-slate-500">Unknown</span>
+                {% endif %}
+            </div>
+
+            <div>
+                <h3 class="font-semibold text-slate-300 mb-3 flex items-center gap-2">
+                    <i class="ph ph-network"></i> Network
+                </h3>
+                {% if ip and ip != 'Unknown' %}
+                    <a href="/ip/{{ ip }}" class="text-brand-500 hover:underline font-semibold">{{ ip }}</a>
+                {% else %}
+                    <span class="text-slate-500">Unknown</span>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap gap-3">
+        <a href="/alerts" class="px-4 py-2 bg-dark-700 border border-dark-600 rounded-md hover:bg-dark-600 flex items-center gap-2">
+            <i class="ph ph-arrow-left"></i> Back to Alerts
+        </a>
+
+        {% if tactic %}
+        <a href="https://attack.mitre.org/tactics/?q={{ tactic | replace(' ', '%20') }}"
+           target="_blank"
+           class="px-4 py-2 bg-risk-high hover:bg-risk-crit rounded-md flex items-center gap-2 text-white">
+            <i class="ph ph-arrow-square-out"></i> MITRE ATT&CK Reference
+        </a>
+        {% endif %}
+
+        {% if computer %}
+        <a href="/host/{{ computer }}" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 rounded-md flex items-center gap-2">
+            <i class="ph ph-device-desktop"></i> View All Host Alerts
+        </a>
+        {% endif %}
+
+        <button onclick="copyJSON()" class="px-4 py-2 bg-dark-600 hover:bg-dark-500 rounded-md flex items-center gap-2">
+            <i class="ph ph-copy"></i> Copy Raw Data
+        </button>
+    </div>
+
+    <!-- Raw JSON -->
+    <div class="bg-dark-800 rounded-xl border border-dark-700 overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-3 border-b border-dark-700">
+            <span class="font-semibold flex items-center gap-2">
+                <i class="ph ph-code"></i> Raw Event Data
+            </span>
+            <button onclick="toggleJSON()" class="text-slate-400 hover:text-white">
+                <i id="jsonIcon" class="ph ph-caret-down text-xl"></i>
+            </button>
+        </div>
+        <div id="jsonContainer" class="max-h-[600px] overflow-auto">
+            <pre id="jsonData" class="p-5 text-green-400 text-xs whitespace-pre-wrap">{{ pretty_json | safe }}</pre>
+        </div>
+        <div class="px-5 py-3 text-xs text-slate-500 border-t border-dark-700">
+            Note: Only first 4000 characters of RAW_JSON are displayed.
+        </div>
+    </div>
+
+    <!-- Recommendations -->
+    <div class="bg-dark-800 rounded-xl border border-dark-700 p-6 space-y-6">
+        <h2 class="text-lg font-semibold flex items-center gap-2">
+            <i class="ph ph-lightbulb text-yellow-300"></i> Recommended Actions
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+            <div class="p-4 rounded-xl bg-[rgba(0,212,255,0.08)] border-l-4 border-brand-500">
+                <p class="font-semibold text-brand-500 mb-2 flex items-center gap-2">
+                    <i class="ph ph-check-circle"></i> Immediate
+                </p>
+                <ul class="text-sm text-slate-300 space-y-1">
+                    <li>Isolate affected host</li>
+                    <li>Review user activity logs</li>
+                    <li>Check for lateral movement</li>
+                </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-[rgba(254,202,87,0.08)] border-l-4 border-yellow-400">
+                <p class="font-semibold text-yellow-300 mb-2 flex items-center gap-2">
+                    <i class="ph ph-magnifying-glass"></i> Investigation
+                </p>
+                <ul class="text-sm text-slate-300 space-y-1">
+                    <li>Analyze network traffic</li>
+                    <li>Check authentication logs</li>
+                    <li>Review recent changes</li>
+                </ul>
+            </div>
+
+            <div class="p-4 rounded-xl bg-[rgba(29,209,161,0.08)] border-l-4 border-emerald-400">
+                <p class="font-semibold text-emerald-400 mb-2 flex items-center gap-2">
+                    <i class="ph ph-shield-check"></i> Remediation
+                </p>
+                <ul class="text-sm text-slate-300 space-y-1">
+                    <li>Reset compromised credentials</li>
+                    <li>Apply security patches</li>
+                    <li>Update security policies</li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+{% block js %}
+<script>
+function copyJSON() {
+    navigator.clipboard.writeText(document.getElementById('jsonData').textContent);
+    showToast("RAW JSON copied to clipboard", "success");
+}
+
+function toggleJSON() {
+    const box = document.getElementById('jsonContainer');
+    const icon = document.getElementById('jsonIcon');
+    box.classList.toggle('hidden');
+    icon.classList.toggle('ph-caret-up');
+    icon.classList.toggle('ph-caret-down');
+}
+</script>
+{% endblock %}

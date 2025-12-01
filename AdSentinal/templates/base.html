@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AD Sentinel{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsvectormap/dist/css/jsvectormap.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/js/jsvectormap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsvectormap/dist/maps/world.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: { 900: '#020617', 800: '#0f172a', 700: '#1e293b', card: '#1e293b' },
+                        brand: { 500: '#6366f1', 600: '#4f46e5' },
+                        risk: { crit: '#f43f5e', high: '#f97316', med: '#eab308', low: '#10b981' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { background: #020617; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020617; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .nav-link.active { background: rgba(99, 102, 241, 0.1); border-right: 3px solid #6366f1; color: #818cf8; }
+        .toast { transition: all 0.3s ease; transform: translateX(100%); opacity: 0; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2"></div>
+
+    <aside class="w-64 bg-dark-800 border-r border-dark-700 flex flex-col hidden md:flex">
+        <div class="h-16 flex items-center px-6 border-b border-dark-700">
+            <i class="ph-fill ph-shield-check text-brand-500 text-2xl mr-2"></i>
+            <span class="text-xl font-bold tracking-tight">AD Sentinel</span>
+        </div>
+        <nav class="flex-1 py-6 space-y-1">
+            <a href="/" class="nav-link flex items-center px-6 py-3 text-sm font-medium text-slate-400 hover:text-white hover:bg-dark-700 transition-all">
+                <i class="ph ph-squares-four text-lg mr-3"></i> Dashboard
+            </a>
+            <a href="/alerts" class="nav-link flex items-center px-6 py-3 text-sm font-medium text-slate-400 hover:text-white hover:bg-dark-700 transition-all">
+                <i class="ph ph-warning text-lg mr-3"></i> Alerts
+            </a>
+            <a href="/stats" class="nav-link flex items-center px-6 py-3 text-sm font-medium text-slate-400 hover:text-white hover:bg-dark-700 transition-all">
+                <i class="ph ph-chart-line-up text-lg mr-3"></i> Analytics
+            </a>
+        </nav>
+        <div class="p-4 border-t border-dark-700">
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-brand-500 animate-pulse"></div>
+                <span class="text-xs font-bold text-brand-500 uppercase tracking-wider">System Active</span>
+            </div>
+        </div>
+    </aside>
+
+    <div class="flex-1 flex flex-col min-w-0 bg-dark-900">
+        <header class="h-16 glass flex items-center justify-between px-6 sticky top-0 z-20">
+            <span class="md:hidden font-bold text-lg">AD Sentinel</span>
+            <div class="flex-1 flex justify-end">
+                <button onclick="location.reload()" class="p-2 text-slate-400 hover:text-white"><i class="ph ph-arrows-clockwise text-xl"></i></button>
+            </div>
+        </header>
+        <main class="flex-1 overflow-y-auto p-6">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        // Active Link
+        const path = window.location.pathname;
+        document.querySelectorAll('.nav-link').forEach(el => {
+            if(el.getAttribute('href') === path) el.classList.add('active');
+        });
+
+        // Charts
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.borderColor = '#334155';
+
+        // Toast
+        function showToast(msg, type='success') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const color = type === 'success' ? 'bg-emerald-600' : 'bg-red-600';
+            el.className = `toast show flex items-center w-80 p-4 text-white ${color} rounded-lg shadow-xl`;
+            el.innerHTML = `<i class="ph-fill ${type==='success'?'ph-check-circle':'ph-warning'} text-xl mr-3"></i><span class="text-sm font-medium">${msg}</span>`;
+            container.appendChild(el);
+            setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 3000);
+        }
+
+        // API Action
+        async function triggerAction(url, payload) {
+            try {
+                const res = await fetch(url, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                showToast(data.message, 'success');
+            } catch(e) { showToast("Action Failed", 'error'); }
+        }
+
+        // CSV Export Helper
+        function exportTable(tableId, filename) {
+            let rows = [];
+            let table = document.getElementById(tableId);
+            for (let i = 0; i < table.rows.length; i++) {
+                let row = [], cols = table.rows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length - 1; j++) row.push('"' + cols[j].innerText + '"');
+                rows.push(row.join(","));
+            }
+            let link = document.createElement("a");
+            link.href = "data:text/csv;charset=utf-8," + encodeURI(rows.join("\n"));
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+        }
+    </script>
+    {% block js %}{% endblock %}
+</body>
+</html>
